@@ -1,0 +1,75 @@
+version: "3.2"
+services:
+   rabbitmq:
+     image: afra-repo.jiring.local:8083/rabbitmq-cluster
+     hostname: rabbitmq
+     environment:
+       - ERLANG_COOKIE=abcdefg
+       - RABBITMQ_DEFAULT_USER=coreswitch
+       - RABBITMQ_DEFAULT_PASS=coreswitch
+#    volumes:
+#        - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+#        - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+     ports:
+       - target: 5672
+         published: 5672
+         target: 15672
+         published: 15672
+         protocol: tcp
+         mode: host
+     deploy:
+         mode: replicated
+         replicas: 1
+         endpoint_mode: dnsrr
+     networks:
+       - core_switch
+
+   slave1_rabbitmq:
+     image: afra-repo.jiring.local:8083/rabbitmq-cluster
+     hostname: slave1_rabbitmq
+     links:
+       - rabbitmq
+     environment:
+       - ERLANG_COOKIE=abcdefg
+       - CLUSTERED=true
+       - CLUSTER_WITH=rabbitmq
+       - ENABLE_RAM=true
+     ports:
+       - target: 5673
+         published: 5672
+         target: 15673
+         published: 15672
+         protocol: tcp
+         mode: host
+     deploy:
+         mode: replicated
+         replicas: 1
+         endpoint_mode: dnsrr
+     networks:
+       - core_switch
+
+   slave2_rabbitmq:
+     image: afra-repo.jiring.local:8083/rabbitmq-cluster
+     hostname: slave2_rabbitmq
+     links:
+       - rabbitmq
+       - slave1_rabbitmq
+     environment:
+       - ERLANG_COOKIE=abcdefg
+       - CLUSTERED=true
+       - CLUSTER_WITH=rabbitmq
+     ports:
+       - target: 5674
+         published: 5672
+         protocol: tcp
+         mode: host
+     deploy:
+         mode: replicated
+         replicas: 1
+         endpoint_mode: dnsrr
+     networks:
+       - core_switch
+
+networks:
+  core_switch:
+    external: true
